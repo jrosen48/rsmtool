@@ -32,17 +32,21 @@ builtin_models = ['LinearRegression',
                   'LassoFixedLambda',
                   'PositiveLassoCV']
 
-skll_models = ['AdaBoostRegressor',
-               'DecisionTreeRegressor',
-               'ElasticNet',
-               'GradientBoostingRegressor',
-               'KNeighborsRegressor',
-               'Lasso',
-               'LinearSVR',
-               'RandomForestRegressor',
-               'Ridge',
-               'SGDRegressor',
-               'SVR']
+skll_linear_models = ['ElasticNet',
+                      'Lasso',
+                      'LinearSVR', 
+                      'Ridge',
+                      'SGDRegressor']
+
+skll_non_linear_models = ['AdaBoostRegressor',
+                          'GradientBoostingRegressor',
+                          'DecisionTreeRegressor',
+                          'KNeighborsRegressor',
+                          'RandomForestRegressor',
+                          'SVR']
+
+skll_models = skll_linear_models + skll_non_linear_models
+
 
 
 def model_fit_to_dataframe(fit):
@@ -702,16 +706,18 @@ def train_skll_model(model_name, df_train, experiment_id, csvdir, figdir):
 
     learner.train(fs, grid_search=True, grid_objective=objective, grid_jobs=1)
 
-    # extract the coefficients
-    df_coef = skll_learner_params_to_dataframe(learner)
-    used_features = learner.feat_vectorizer.get_feature_names()
+    # extract and process the coefficients. We only do this for linear models
 
-    # save the raw coefficients to a file
-    df_coef.to_csv(join(csvdir, '{}_coefficients.csv'.format(experiment_id)), index=False)
+    if model_name in skll_linear_models:
+        df_coef = skll_learner_params_to_dataframe(learner)
+        used_features = learner.feat_vectorizer.get_feature_names()
 
-    # compute and save standardized and relative coefficients
-    df_betas = compute_standardized_relative_coefficients(df_coef, df_train, used_features)
-    df_betas.to_csv(join(csvdir, '{}_betas.csv'.format(experiment_id)), index=False)
+        # save the raw coefficients to a file
+        df_coef.to_csv(join(csvdir, '{}_coefficients.csv'.format(experiment_id)), index=False)
+
+        # compute and save standardized and relative coefficients
+        df_betas = compute_standardized_relative_coefficients(df_coef, df_train, used_features)
+        df_betas.to_csv(join(csvdir, '{}_betas.csv'.format(experiment_id)), index=False)
 
     # save the SKLL model to disk with the given model name prefix
     model_file = join(csvdir, '{}.model'.format(experiment_id))
