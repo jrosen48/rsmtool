@@ -160,6 +160,40 @@ def skll_learner_params_to_dataframe(learner):
     return df_coef
 
 
+def compute_standardized_relative_coefficients(df_coef, df_train, used_features):
+
+    """
+    Compute standardized and relative coefficients given the estimated coefficients.
+
+    Parameters
+    ----------
+    df_coef : pandas DataFrame
+        DataFrame containing the linear coefficients estimated for each feature
+    
+    df_train : pandas DataFrame
+        DataFrame containing feature values and scores used to estimate the coefficients
+
+    used_features : list
+        A list of names of features to be included into the table 
+
+    Returns
+    -------
+    df_betas : pandas DataFrame
+        DataFrame containing standardized and relative coefficients
+
+    """
+
+    # compute the standardized and relative coefficients (betas) for the
+    # non-intercept features and save to a file
+    df_betas = df_coef.set_index('feature').loc[used_features]
+    df_betas = df_betas.multiply(df_train[used_features].std(), axis='index') / df_train['sc1'].std()
+    df_betas.columns = ['standardized']
+    df_betas['relative'] = df_betas / sum(abs(df_betas['standardized']))
+    df_betas.reset_index(inplace=True)
+    return(df_betas)
+    
+
+
 def create_fake_skll_learner(df_coefficients):
 
     """
@@ -596,18 +630,13 @@ def train_builtin_model(model_name, df_train, experiment_id, csvdir, figdir):
         # we used all the features
         used_features = feature_columns
 
-
     # save the raw coefficients to a file
     df_coef.to_csv(join(csvdir, '{}_coefficients.csv'.format(experiment_id)), index=False)
 
-    # compute the standardized and relative coefficients (betas) for the
-    # non-intercept features and save to a file
-    df_betas = df_coef.set_index('feature').loc[used_features]
-    df_betas = df_betas.multiply(df_train[used_features].std(), axis='index') / df_train['sc1'].std()
-    df_betas.columns = ['standardized']
-    df_betas['relative'] = df_betas / sum(abs(df_betas['standardized']))
-    df_betas.reset_index(inplace=True)
+    # compute and save standardized and relative coefficients
+    df_betas = compute_standardized_relative_coefficients(df_coef, df_train, used_features)
     df_betas.to_csv(join(csvdir, '{}_betas.csv'.format(experiment_id)), index=False)
+
 
     # save the OLS fit object and its summary to files
     if fit:
@@ -673,7 +702,16 @@ def train_skll_model(model_name, df_train, experiment_id, csvdir, figdir):
 
     learner.train(fs, grid_search=True, grid_objective=objective, grid_jobs=1)
 
-    # TODO: compute betas for linear SKLL models?
+    # extract the coefficients
+    df_coef = skll_learner_params_to_dataframe(learner)
+    used_features = learner.feat_vectorizer.get_feature_names()
+
+    # save the raw coefficients to a file
+    df_coef.to_csv(join(csvdir, '{}_coefficients.csv'.format(experiment_id)), index=False)
+
+    # compute and save standardized and relative coefficients
+    df_betas = compute_standardized_relative_coefficients(df_coef, df_train, used_features)
+    df_betas.to_csv(join(csvdir, '{}_betas.csv'.format(experiment_id)), index=False)
 
     # save the SKLL model to disk with the given model name prefix
     model_file = join(csvdir, '{}.model'.format(experiment_id))
