@@ -14,6 +14,7 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
+import sklearn
 import statsmodels.api as sm
 
 from numpy.random import RandomState
@@ -142,7 +143,13 @@ def skll_learner_params_to_dataframe(learner):
 
     """
     # get the intercept, coefficients, and feature names
-    intercept = learner.model.intercept_
+    # note that we need to account for the fact that 
+    # SGDRegressor returns intercept as a 1D array 
+    
+    if learner.model_type == sklearn.linear_model.stochastic_gradient.SGDRegressor:
+        intercept = learner.model.intercept_[0]
+    else:
+        intercept = learner.model.intercept_       
     coefficients = learner.model.coef_
     feature_names = learner.feat_vectorizer.get_feature_names()
 
