@@ -670,7 +670,7 @@ def validate_feature_specs(df_specs_org):
     if 'sign' in df_specs_new:
         try:
             df_specs_new['sign'] = df_specs_new['sign'].astype(float)
-            assert np.all(df_specs_new['sign'].isin([-1, 1]))
+            #assert np.all(df_specs_new['sign'].isin([-1, 1]))
         except (ValueError, AssertionError):
             raise ValueError("The `sign` column in the feature file can only contain '1' or '-1'")
     else:
